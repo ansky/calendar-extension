@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "My First Extension",
+  "version": "1.0",
+  "description": "A simple Chrome extension.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon.jpeg",
+      "32": "images/icon.jpeg",
+      "48": "images/icon.jpeg",
+      "128": "images/icon.jpeg"
+    }
+  },
+  "icons": {
+    "16": "images/icon.jpeg",
+    "32": "images/icon.jpeg",
+    "48": "images/icon.jpeg",
+    "128": "images/icon.jpeg"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://www.googleapis.com/"
+  ]
+}
