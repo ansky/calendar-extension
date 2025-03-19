@@ -25,6 +25,13 @@
     "identity"
   ],
   "host_permissions": [
-    "https://www.googleapis.com/"
-  ]
+    "https://www.googleapis.com/",
+    "https://generativelanguage.googleapis.com/"
+
+  ],
+  "oauth2": {
+    "client_id" : "833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com",
+    "scopes": ["https://www.googleapis.com/auth/calendar",
+        "https://www.googleapis.com/auth/userinfo.email"]
+  }
 }

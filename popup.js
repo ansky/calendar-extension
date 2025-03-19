@@ -2,8 +2,7 @@
 
 let selectedText = "";
 let accessToken = null;
-let userEmail = null;
-const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com'; // Replace with your client ID
+const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
 
 //Inject content.js
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -47,7 +46,7 @@ document.getElementById("createEvent").addEventListener("click", () => {
 
 async function createCalendarEvent(text) {
   if (!accessToken) {
-    alert("Please sign in first.");
+    displayError("Please sign in first.");
     return;
   }
   const startDate = new Date();
@@ -79,10 +78,10 @@ async function createCalendarEvent(text) {
     }
 
     const data = await response.json();
-    alert(`Event created: ${data.htmlLink}`);
+    displaySuccess(`Event created: ${data.htmlLink}`);
   } catch (error) {
     console.error("Error creating event:", error);
-    alert("Error creating event. Please try again.");
+    displayError("Error creating event. Please try again.");
   }
 }
 
@@ -92,48 +91,21 @@ document.getElementById("signInButton").addEventListener("click", () => {
 });
 
 function signIn() {
-    const redirectUrl = chrome.identity.getRedirectURL();
-    console.log("Redirect URL:", redirectUrl);
-    const authUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&response_type=token&redirect_uri=${redirectUrl}&scope=https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email&prompt=consent`;
-  chrome.identity.launchWebAuthFlow(
-    {
-      url: authUrl,
-      interactive: true,
-    },
-    function (redirectUrl) {
-      if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
-        alert("Error signing in. Please try again.");
-        return;
-      }
-      const token = new URL(redirectUrl).hash.match(/access_token=([^&]*)/)[1];
-      accessToken = token;
-      console.log("Access Token:", accessToken);
-      fetchUserEmail();
-      updateUI();
-    }
-  );
-}
+    const scopes = [
+        "https://www.googleapis.com/auth/calendar",
+        // "https://www.googleapis.com/auth/userinfo.email" // Removed this scope
+    ];
 
-async function fetchUserEmail() {
-  try {
-    const response = await fetch("https://people.googleapis.com/v1/people/me?personFields=emailAddresses", {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+    chrome.identity.getAuthToken({ interactive: true, scopes: scopes }, function (token) {
+        if (chrome.runtime.lastError) {
+            console.error(chrome.runtime.lastError);
+            displayError("Error signing in. Please try again.");
+            return;
+        }
+        accessToken = token;
+        console.log("Access Token:", accessToken);
+        updateUI();
     });
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message);
-    }
-    const data = await response.json();
-    userEmail = data.emailAddresses[0].value;
-    console.log("User Email:", userEmail);
-    updateUI();
-  } catch (error) {
-    console.error("Error getting user email:", error);
-    alert("Error getting user email. Please try again.");
-  }
 }
 
 function updateUI() {
@@ -141,23 +113,19 @@ function updateUI() {
   const createEventButton = document.getElementById("createEvent");
   const userEmailDisplay = document.getElementById("userEmailDisplay");
 
-  if (accessToken && userEmail) {
+  if (accessToken) {
     signInButton.style.display = "none";
-    userEmailDisplay.textContent = `Signed in as: ${userEmail}`;
+    // userEmailDisplay.textContent = `Signed in as: ${userEmail}`; // Removed this line
     createEventButton.disabled = selectedText? false : true;
   } else {
     signInButton.style.display = "block";
-    userEmailDisplay.textContent = "";
+    // userEmailDisplay.textContent = ""; // Removed this line
     createEventButton.disabled = true;
   }
 }
 
 function initialize(){
-  if (accessToken){
-    fetchUserEmail();
-  }else{
-    updateUI();
-  }
+  updateUI();
 }
 
 //Set button to disabled by default
@@ -167,3 +135,12 @@ document.addEventListener("DOMContentLoaded", () => {
   createEventButton.disabled = true;
   initialize();
 });
+
+// Helper functions for UI feedback
+function displayError(message) {
+  alert(`Error: ${message}`);
+}
+
+function displaySuccess(message) {
+  alert(`Success: ${message}`);
+}
