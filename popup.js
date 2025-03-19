@@ -3,6 +3,7 @@
 let selectedText = "";
 let accessToken = null;
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
+const geminiApiKey = 'AIzaSyCKXjau5bxuH89kO0L5SytdWweNU1ZWNlY'; // Replace with your actual Gemini API key
 
 //Inject content.js
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -41,27 +42,86 @@ function displaySelectedText(text) {
 //Create calendar event
 document.getElementById("createEvent").addEventListener("click", () => {
   if (!selectedText) return;
-  createCalendarEvent(selectedText);
+  getEventDetailsFromGemini(selectedText)
+    .then(eventDetails => {
+      createCalendarEvent(eventDetails);
+    })
+    .catch(error => {
+      console.error("Error getting event details from Gemini:", error);
+      displayError("Error getting event details. Please try again.");
+    });
 });
 
-async function createCalendarEvent(text) {
+async function getEventDetailsFromGemini(text) {
+  const prompt = `Extract the following information from the text provided and return it as a JSON object:
+  - summary: A short title for the event.
+  - start: The start date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today.
+  - end: The end date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 10:00 AM. If no date is specified, assume today.
+  - location: The location of the event.
+  - description: A more detailed description of the event.
+
+  Text: ${text}
+  `;
+
+  const requestBody = {
+    contents: [{
+      parts: [{
+        text: prompt
+      }]
+    }],
+    generationConfig: {
+      maxOutputTokens: 200,
+      temperature: 0.4,
+      topP: 1
+    }
+  };
+
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Gemini API request failed with status ${response.status}: ${error.error.message}`);
+    }
+
+    const data = await response.json();
+    console.log("Gemini Response:", data);
+    let geminiResponse = data.candidates[0].content.parts[0].text;
+    geminiResponse = geminiResponse.replace(/```(json)?/g, '').trim();
+    const eventDetails = JSON.parse(geminiResponse);
+    return eventDetails;
+  } catch (error) {
+    console.error("Error getting event details from Gemini:", error);
+    throw error;
+  }
+}
+
+async function createCalendarEvent(eventDetails) {
   if (!accessToken) {
     displayError("Please sign in first.");
     return;
   }
-  const startDate = new Date();
-  const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // 1 hour later
+
   const event = {
-    summary: text,
+    summary: eventDetails.summary,
     start: {
-      dateTime: startDate.toISOString(),
+      dateTime: eventDetails.start,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     end: {
-      dateTime: endDate.toISOString(),
+      dateTime: eventDetails.end,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
+    location: eventDetails.location,
+    description: eventDetails.description,
   };
+
   try {
     const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
       method: "POST",
