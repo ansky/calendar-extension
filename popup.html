@@ -2,14 +2,54 @@
 <html>
 <head>
   <title>Calendar Event Creator</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      width: 400px; /* Set the desired width here */
+      font-family: sans-serif;
+      padding: 10px;
+    }
+    #error-message, #success-message {
+      display: none;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+    }
+    #error-message {
+      background-color: #ffe6e6;
+      color: #cc0000;
+    }
+    #success-message {
+      background-color: #e6ffe6;
+      color: #009900;
+    }
+    #event-details {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: none; /* Hide by default */
+    }
+    #selectedText{
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
   <h1>Create Calendar Event</h1>
-  <div id="userEmailDisplay"></div>
   <button id="signInButton">Sign in with Google</button>
+  <div id="userEmailDisplay"></div>
   <div id="selectedText"></div>
   <button id="createEvent">Create Event</button>
+  <div id="error-message"></div>
+  <div id="success-message"></div>
+  <div id="event-details">
+    <h2>Event Details</h2>
+    <p><strong>Summary:</strong> <span id="event-summary"></span></p>
+    <p><strong>Start:</strong> <span id="event-start"></span></p>
+    <p><strong>End:</strong> <span id="event-end"></span></p>
+    <p><strong>Location:</strong> <span id="event-location"></span></p>
+    <p><strong>Description:</strong> <span id="event-description"></span></p>
+    <p><strong>Link:</strong> <a id="event-link" href="" target="_blank"></a></p>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>

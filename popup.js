@@ -18,6 +18,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       chrome.tabs.sendMessage(activeTab.id, { action: "startContent" });
     }).catch((err) => {
       console.error("content.js not injected", err);
+      displayError("Error injecting content script.");
     })
   }
 });
@@ -53,12 +54,12 @@ document.getElementById("createEvent").addEventListener("click", () => {
 });
 
 async function getEventDetailsFromGemini(text) {
-  const prompt = `Extract the following information from the text provided and return it as a JSON object:
-  - summary: A short title for the event.
+  const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it as a JSON object:
+  - summary: A short title for the event. Be concise.
   - start: The start date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today.
   - end: The end date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 10:00 AM. If no date is specified, assume today.
-  - location: The location of the event.
-  - description: A more detailed description of the event.
+  - location: The location of the event. If no location is specified, set it to an empty string.
+  - description: A more detailed description of the event. If no description is specified, set it to an empty string.
 
   Text: ${text}
   `;
@@ -122,6 +123,9 @@ async function createCalendarEvent(eventDetails) {
     description: eventDetails.description,
   };
 
+  // Log the event details before sending them to the API
+  console.log("Event details being sent to Google Calendar API:", event);
+
   try {
     const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
       method: "POST",
@@ -138,7 +142,9 @@ async function createCalendarEvent(eventDetails) {
     }
 
     const data = await response.json();
-    displaySuccess(`Event created: ${data.htmlLink}`);
+    // Log the response from the API
+    console.log("Google Calendar API Response:", data);
+    displaySuccess(eventDetails, data.htmlLink);
   } catch (error) {
     console.error("Error creating event:", error);
     displayError("Error creating event. Please try again.");
@@ -153,7 +159,6 @@ document.getElementById("signInButton").addEventListener("click", () => {
 function signIn() {
     const scopes = [
         "https://www.googleapis.com/auth/calendar",
-        // "https://www.googleapis.com/auth/userinfo.email" // Removed this scope
     ];
 
     chrome.identity.getAuthToken({ interactive: true, scopes: scopes }, function (token) {
@@ -175,11 +180,9 @@ function updateUI() {
 
   if (accessToken) {
     signInButton.style.display = "none";
-    // userEmailDisplay.textContent = `Signed in as: ${userEmail}`; // Removed this line
     createEventButton.disabled = selectedText? false : true;
   } else {
     signInButton.style.display = "block";
-    // userEmailDisplay.textContent = ""; // Removed this line
     createEventButton.disabled = true;
   }
 }
@@ -198,9 +201,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Helper functions for UI feedback
 function displayError(message) {
-  alert(`Error: ${message}`);
+  const errorDiv = document.getElementById('error-message');
+  if(errorDiv){
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => {
+      errorDiv.style.display = 'none';
+    }, 5000);
+  } else {
+    alert(`Error: ${message}`);
+  }
 }
 
-function displaySuccess(message) {
-  alert(`Success: ${message}`);
+function displaySuccess(eventDetails, eventLink) {
+  const eventDetailsDiv = document.getElementById('event-details');
+  if (!eventDetailsDiv) return;
+
+  document.getElementById('event-summary').textContent = eventDetails.summary;
+  document.getElementById('event-start').textContent = eventDetails.start;
+  document.getElementById('event-end').textContent = eventDetails.end;
+  document.getElementById('event-location').textContent = eventDetails.location;
+  document.getElementById('event-description').textContent = eventDetails.description;
+  document.getElementById('event-link').href = eventLink;
+  document.getElementById('event-link').textContent = eventLink;
+
+  eventDetailsDiv.style.display = 'block';
 }
