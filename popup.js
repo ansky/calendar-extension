@@ -98,14 +98,21 @@ document.getElementById("calendar-select").addEventListener("change", (event) =>
 //Create calendar event
 document.getElementById("createEvent").addEventListener("click", () => {
   if (!selectedText) return;
-  getEventDetailsFromGemini(selectedText)
-    .then(eventDetails => {
-      createCalendarEvent(eventDetails);
-    })
-    .catch(error => {
-      console.error("Error getting event details from Gemini:", error);
-      displayError("Error getting event details. Please try again.");
-    });
+  // Get the current tab's URL
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const currentTab = tabs[0];
+    const currentUrl = currentTab.url;
+    getEventDetailsFromGemini(selectedText)
+      .then(eventDetails => {
+        // Append the URL to the description
+        eventDetails.description = `${eventDetails.description}\n\nSource URL: ${currentUrl}`;
+        createCalendarEvent(eventDetails);
+      })
+      .catch(error => {
+        console.error("Error getting event details from Gemini:", error);
+        displayError("Error getting event details. Please try again.");
+      });
+  });
 });
 
 async function getEventDetailsFromGemini(text) {
