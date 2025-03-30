@@ -31,6 +31,10 @@
     #selectedText{
       margin-bottom: 10px;
     }
+    #calendar-select-container {
+      margin-bottom: 10px;
+      display: none; /* Hide initially */
+    }
   </style>
 </head>
 <body>
@@ -38,6 +42,10 @@
   <button id="signInButton">Sign in with Google</button>
   <div id="userEmailDisplay"></div>
   <div id="selectedText"></div>
+  <div id="calendar-select-container">
+    <label for="calendar-select">Select Calendar:</label>
+    <select id="calendar-select"></select>
+  </div>
   <button id="createEvent">Create Event</button>
   <div id="error-message"></div>
   <div id="success-message"></div>

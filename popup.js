@@ -2,6 +2,7 @@
 
 let selectedText = "";
 let accessToken = null;
+let selectedCalendarId = null; // Variable to store the selected calendar ID
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
 const geminiApiKey = 'AIzaSyCKXjau5bxuH89kO0L5SytdWweNU1ZWNlY'; // Replace with your actual Gemini API key
 
@@ -39,6 +40,60 @@ function displaySelectedText(text) {
   textDisplay.textContent = `Selected Text: ${text}`;
   updateUI();
 }
+
+// Function to fetch the user's calendars
+async function fetchCalendars() {
+  try {
+    const response = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message);
+    }
+    const data = await response.json();
+    const calendars = data.items;
+    return calendars;
+  } catch (error) {
+    console.error("Error fetching calendars:", error);
+    displayError("Error fetching calendars.");
+    return [];
+  }
+}
+
+// Function to populate the calendar dropdown
+function populateCalendarDropdown(calendars) {
+  const calendarSelect = document.getElementById("calendar-select");
+  calendarSelect.innerHTML = ""; // Clear existing options
+
+  calendars.forEach((calendar) => {
+    const option = document.createElement("option");
+    option.value = calendar.id;
+    option.text = calendar.summary;
+    calendarSelect.appendChild(option);
+  });
+
+  // Set the default selected calendar (e.g., the primary calendar)
+  const primaryCalendar = calendars.find(calendar => calendar.primary);
+  if (primaryCalendar) {
+    calendarSelect.value = primaryCalendar.id;
+    selectedCalendarId = primaryCalendar.id;
+  } else {
+    selectedCalendarId = calendars[0].id;
+  }
+
+  // Show the calendar select container
+  document.getElementById("calendar-select-container").style.display = "block";
+}
+
+// Event listener for calendar selection
+document.getElementById("calendar-select").addEventListener("change", (event) => {
+  selectedCalendarId = event.target.value;
+});
 
 //Create calendar event
 document.getElementById("createEvent").addEventListener("click", () => {
@@ -109,6 +164,11 @@ async function createCalendarEvent(eventDetails) {
     return;
   }
 
+  if (!selectedCalendarId) {
+    displayError("No calendar selected.");
+    return;
+  }
+
   const event = {
     summary: eventDetails.summary,
     start: {
@@ -127,7 +187,7 @@ async function createCalendarEvent(eventDetails) {
   console.log("Event details being sent to Google Calendar API:", event);
 
   try {
-    const response = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    const response = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${selectedCalendarId}/events`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -161,7 +221,7 @@ function signIn() {
         "https://www.googleapis.com/auth/calendar",
     ];
 
-    chrome.identity.getAuthToken({ interactive: true, scopes: scopes }, function (token) {
+    chrome.identity.getAuthToken({ interactive: true, scopes: scopes }, async function (token) {
         if (chrome.runtime.lastError) {
             console.error(chrome.runtime.lastError);
             displayError("Error signing in. Please try again.");
@@ -169,6 +229,9 @@ function signIn() {
         }
         accessToken = token;
         console.log("Access Token:", accessToken);
+        // Fetch and display calendars
+        const calendars = await fetchCalendars();
+        populateCalendarDropdown(calendars);
         updateUI();
     });
 }
