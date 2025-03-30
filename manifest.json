@@ -6,18 +6,18 @@
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
-      "16": "images/icon.jpeg",
-      "32": "images/icon.jpeg",
-      "48": "images/icon.jpeg",
-      "128": "images/icon.jpeg"
+      "16": "images/panda_icon_16x16.png",
+      "32": "images/panda_icon_32x32.png",
+      "48": "images/panda_icon_48x48.png",
+      "128": "images/panda_icon_128x128.png"
     }
   },
   "icons": {
-    "16": "images/icon.jpeg",
-    "32": "images/icon.jpeg",
-    "48": "images/icon.jpeg",
-    "128": "images/icon.jpeg"
-  },
+    "16": "images/panda_icon_16x16.png",
+    "32": "images/panda_icon_32x32.png",
+    "48": "images/panda_icon_48x48.png",
+    "128": "images/panda_icon_128x128.png"
+},
   "permissions": [
     "storage",
     "activeTab",
