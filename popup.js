@@ -65,7 +65,6 @@ async function fetchCalendars() {
   }
 }
 
-// Function to populate the calendar dropdown
 function populateCalendarDropdown(calendars) {
   const calendarSelect = document.getElementById("calendar-select");
   calendarSelect.innerHTML = ""; // Clear existing options
@@ -77,22 +76,34 @@ function populateCalendarDropdown(calendars) {
     calendarSelect.appendChild(option);
   });
 
-  // Set the default selected calendar (e.g., the primary calendar)
-  const primaryCalendar = calendars.find(calendar => calendar.primary);
-  if (primaryCalendar) {
-    calendarSelect.value = primaryCalendar.id;
-    selectedCalendarId = primaryCalendar.id;
-  } else {
-    selectedCalendarId = calendars[0].id;
-  }
+  // Retrieve the last selected calendar ID from storage
+  chrome.storage.local.get(['lastSelectedCalendarId'], (result) => {
+    const lastSelectedCalendarId = result.lastSelectedCalendarId;
 
-  // Show the calendar select container
-  document.getElementById("calendar-select-container").style.display = "block";
+    // Set the default selected calendar
+    if (lastSelectedCalendarId && calendars.find(calendar => calendar.id === lastSelectedCalendarId)) {
+      calendarSelect.value = lastSelectedCalendarId;
+      selectedCalendarId = lastSelectedCalendarId;
+    } else {
+      // Fallback to the primary calendar (or the first calendar)
+      const primaryCalendar = calendars.find(calendar => calendar.primary);
+      if (primaryCalendar) {
+        calendarSelect.value = primaryCalendar.id;
+        selectedCalendarId = primaryCalendar.id;
+      } else {
+        selectedCalendarId = calendars[0].id;
+      }
+    }
+    // Show the calendar select container
+    document.getElementById("calendar-select-container").style.display = "block";
+  });
 }
 
 // Event listener for calendar selection
 document.getElementById("calendar-select").addEventListener("change", (event) => {
   selectedCalendarId = event.target.value;
+  // Store the selected calendar ID in storage
+  chrome.storage.local.set({ lastSelectedCalendarId: selectedCalendarId });
 });
 
 //Create calendar event
@@ -156,8 +167,36 @@ async function getEventDetailsFromGemini(text) {
     const data = await response.json();
     console.log("Gemini Response:", data);
     let geminiResponse = data.candidates[0].content.parts[0].text;
-    geminiResponse = geminiResponse.replace(/```(json)?/g, '').trim();
-    const eventDetails = JSON.parse(geminiResponse);
+
+    // Clean up the Gemini response
+    geminiResponse = geminiResponse.replace(/```(json)?/g, '').trim(); // Remove code block markers
+    geminiResponse = geminiResponse.replace(/,(?=\s*?[\}\]])/g, ''); // Remove trailing commas
+    geminiResponse = geminiResponse.replace(/\\"/g, '"'); // Replace escaped quotes with regular quotes
+    geminiResponse = geminiResponse.replace(/\\n/g, '\\\\n'); // Replace escaped newlines with double escaped newlines
+    geminiResponse = geminiResponse.replace(/\\t/g, '\\\\t'); // Replace escaped tabs with double escaped tabs
+    geminiResponse = geminiResponse.replace(/\\r/g, '\\\\r'); // Replace escaped carriage returns with double escaped carriage returns
+    geminiResponse = geminiResponse.replace(/\\f/g, '\\\\f'); // Replace escaped form feeds with double escaped form feeds
+    geminiResponse = geminiResponse.replace(/\\b/g, '\\\\b'); // Replace escaped backspaces with double escaped backspaces
+    geminiResponse = geminiResponse.replace(/\\u/g, '\\\\u'); // Replace escaped unicode with double escaped unicode
+
+    // Attempt to parse the cleaned response
+    let eventDetails;
+    try {
+      eventDetails = JSON.parse(geminiResponse);
+    } catch (parseError) {
+      console.error("Error parsing Gemini response:", parseError);
+      console.error("Problematic Gemini Response:", geminiResponse);
+      displayError("Error parsing event details. Please try again.");
+      // Return a default object
+      return {
+        summary: "New Event",
+        start: new Date().toISOString(),
+        end: new Date(Date.now() + 3600000).toISOString(),
+        location: "",
+        description: "",
+      };
+    }
+
     return eventDetails;
   } catch (error) {
     console.error("Error getting event details from Gemini:", error);
@@ -223,24 +262,32 @@ document.getElementById("signInButton").addEventListener("click", () => {
   signIn();
 });
 
-function signIn() {
-    const scopes = [
-        "https://www.googleapis.com/auth/calendar",
-    ];
+function signIn(interactive = true) {
+  const scopes = [
+    "https://www.googleapis.com/auth/calendar",
+  ];
 
-    chrome.identity.getAuthToken({ interactive: true, scopes: scopes }, async function (token) {
-        if (chrome.runtime.lastError) {
-            console.error(chrome.runtime.lastError);
-            displayError("Error signing in. Please try again.");
-            return;
-        }
-        accessToken = token;
-        console.log("Access Token:", accessToken);
-        // Fetch and display calendars
-        const calendars = await fetchCalendars();
-        populateCalendarDropdown(calendars);
-        updateUI();
-    });
+  chrome.identity.getAuthToken({ interactive: interactive, scopes: scopes }, async function (token) {
+    if (chrome.runtime.lastError) {
+      console.error(chrome.runtime.lastError);
+      if(interactive){
+        displayError("Error signing in. Please try again.");
+      }
+      return;
+    }
+    accessToken = token;
+    console.log("Access Token:", accessToken);
+    // Fetch and display calendars
+    const calendars = await fetchCalendars();
+    populateCalendarDropdown(calendars);
+    updateUI();
+  });
+}
+
+function initialize() {
+  updateUI();
+  // Attempt silent sign-in
+  signIn(false);
 }
 
 function updateUI() {
@@ -255,10 +302,6 @@ function updateUI() {
     signInButton.style.display = "block";
     createEventButton.disabled = true;
   }
-}
-
-function initialize(){
-  updateUI();
 }
 
 //Set button to disabled by default

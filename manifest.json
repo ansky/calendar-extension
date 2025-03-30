@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "My First Extension",
+  "name": "Panda Assistant",
   "version": "1.0",
-  "description": "A simple Chrome extension.",
+  "description": "A panda creates calendar events.",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
