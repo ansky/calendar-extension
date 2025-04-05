@@ -106,6 +106,8 @@ document.getElementById("calendar-select").addEventListener("change", (event) =>
   chrome.storage.local.set({ lastSelectedCalendarId: selectedCalendarId });
 });
 
+let eventDetailsFromGemini = null; // Store the event details from Gemini
+
 //Create calendar event
 document.getElementById("createEvent").addEventListener("click", () => {
   if (!selectedText) return;
@@ -117,13 +119,74 @@ document.getElementById("createEvent").addEventListener("click", () => {
       .then(eventDetails => {
         // Append the URL to the description
         eventDetails.description = `${eventDetails.description}\n\nSource URL: ${currentUrl}`;
-        createCalendarEvent(eventDetails);
+        eventDetailsFromGemini = eventDetails; // Store the details
+        populateForm(eventDetails); // Populate the form
+        document.getElementById('event-form-container').style.display = 'block'; // Show the form
       })
       .catch(error => {
         console.error("Error getting event details from Gemini:", error);
         displayError("Error getting event details. Please try again.");
       });
   });
+});
+
+function populateForm(eventDetails) {
+  document.getElementById('summary').value = eventDetails.summary || '';
+  document.getElementById('start').value = eventDetails.start.slice(0, 16); // Format for datetime-local
+  document.getElementById('end').value = eventDetails.end.slice(0, 16); // Format for datetime-local
+  document.getElementById('location').value = eventDetails.location || '';
+  document.getElementById('description').value = eventDetails.description || '';
+
+  // Populate recurrence fields if they exist
+  if (eventDetails.recurrence) {
+    document.getElementById('frequency').value = eventDetails.recurrence.frequency || '';
+    document.getElementById('interval').value = eventDetails.recurrence.interval || 1;
+    document.getElementById('count').value = eventDetails.recurrence.count || '';
+    document.getElementById('until').value = eventDetails.recurrence.until ? eventDetails.recurrence.until.slice(0, 10) : '';
+    document.getElementById('byday').value = eventDetails.recurrence.byday || '';
+    document.getElementById('bymonthday').value = eventDetails.recurrence.bymonthday || '';
+    document.getElementById('recurrence-fields').style.display = 'block';
+  } else {
+    document.getElementById('recurrence-fields').style.display = 'none';
+  }
+}
+
+// Event listener for form submission
+document.getElementById('event-form').addEventListener('submit', (event) => {
+  event.preventDefault(); // Prevent default form submission
+
+  // Get the form data
+  const formData = new FormData(event.target);
+  const eventDetails = {
+    summary: formData.get('summary'),
+    start: new Date(formData.get('start')).toISOString(),
+    end: new Date(formData.get('end')).toISOString(),
+    location: formData.get('location'),
+    description: formData.get('description'),
+    recurrence: null,
+  };
+
+  // Check if recurrence is enabled
+  if (document.getElementById('recurrence-fields').style.display === 'block') {
+    eventDetails.recurrence = {
+      frequency: formData.get('frequency'),
+      interval: parseInt(formData.get('interval')),
+      count: parseInt(formData.get('count')),
+      until: formData.get('until'),
+      byday: formData.get('byday'),
+      bymonthday: formData.get('bymonthday'),
+    };
+  }
+
+  // Create the event
+  createCalendarEvent(eventDetails);
+  document.getElementById('event-form-container').style.display = 'none';
+});
+
+// Event listener for toggling recurrence fields
+document.getElementById('toggle-recurrence').addEventListener('click', () => {
+  const recurrenceFields = document.getElementById('recurrence-fields');
+  recurrenceFields.style.display = recurrenceFields.style.display === 'none' ? 'block' : 'none';
 });
 
 async function getEventDetailsFromGemini(text) {
