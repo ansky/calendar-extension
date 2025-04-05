@@ -133,6 +133,15 @@ async function getEventDetailsFromGemini(text) {
   - end: The end date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 10:00 AM. If no date is specified, assume today.
   - location: The location of the event. If no location is specified, set it to an empty string.
   - description: A more detailed description of the event. If no description is specified, set it to an empty string.
+  - recurrence: An object that describes the recurrence of the event. If the event is not recurring, set this to null.
+    - frequency: The frequency of the recurrence (e.g., "DAILY", "WEEKLY", "MONTHLY").
+    - interval: The interval between recurrences (e.g., 1 for every week, 2 for every two weeks).
+    - count: The number of times the event should recur.
+    - until: The date the recurrence should end in ISO 8601 format (YYYY-MM-DD).
+    - byday: The days of the week the event should occur on (e.g., "MO,TU,WE,TH,FR").
+    - bymonthday: The days of the month the event should occur on (e.g., "1,15,30").
+    Any event that occurs on multiple days should have a recurrence.  For example, an event that occurs "April 4 - 7" should have a DAILY recurrence with a count of 4.
+
 
   Text: ${text}
   `;
@@ -197,6 +206,11 @@ async function getEventDetailsFromGemini(text) {
       };
     }
 
+    // Ensure recurrence is an object or null
+    if (eventDetails.recurrence !== null && typeof eventDetails.recurrence !== 'object') {
+      eventDetails.recurrence = null;
+  }
+
     return eventDetails;
   } catch (error) {
     console.error("Error getting event details from Gemini:", error);
@@ -215,6 +229,8 @@ async function createCalendarEvent(eventDetails) {
     return;
   }
 
+  const rrule = buildRRule(eventDetails.recurrence);
+
   const event = {
     summary: eventDetails.summary,
     start: {
@@ -227,6 +243,7 @@ async function createCalendarEvent(eventDetails) {
     },
     location: eventDetails.location,
     description: eventDetails.description,
+    recurrence: rrule ? [rrule] : [], // Add the recurrence rule if it exists
   };
 
   // Log the event details before sending them to the API
@@ -339,4 +356,37 @@ function displaySuccess(eventDetails, eventLink) {
   document.getElementById('event-link').textContent = eventLink;
 
   eventDetailsDiv.style.display = 'block';
+}
+
+function buildRRule(recurrence) {
+  if (!recurrence) {
+    return null;
+  }
+
+  let rrule = `RRULE:FREQ=${recurrence.frequency}`;
+
+  if (recurrence.interval) {
+    rrule += `;INTERVAL=${recurrence.interval}`;
+  }
+
+  if (recurrence.count) {
+    rrule += `;COUNT=${recurrence.count}`;
+  }
+
+  if (recurrence.until) {
+    // Format the date to YYYYMMDD
+    const untilDate = new Date(recurrence.until);
+    const formattedUntil = untilDate.toISOString().slice(0, 10).replace(/-/g, '');
+    rrule += `;UNTIL=${formattedUntil}`;
+  }
+
+  if (recurrence.byday) {
+    rrule += `;BYDAY=${recurrence.byday}`;
+  }
+
+  if (recurrence.bymonthday) {
+    rrule += `;BYMONTHDAY=${recurrence.bymonthday}`;
+  }
+
+  return rrule;
 }
