@@ -190,24 +190,35 @@ document.getElementById('toggle-recurrence').addEventListener('click', () => {
 });
 
 async function getEventDetailsFromGemini(text) {
-  const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it as a JSON object:
-  - summary: A short title for the event. Be concise.
-  - start: The start date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today.
-  - end: The end date and time of the event in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 10:00 AM. If no date is specified, assume today.
-  - location: The location of the event. If no location is specified, set it to an empty string.
-  - description: A more detailed description of the event. If no description is specified, set it to an empty string.
-  - recurrence: An object that describes the recurrence of the event. If the event is not recurring, set this to null.
-    - frequency: The frequency of the recurrence (e.g., "DAILY", "WEEKLY", "MONTHLY").
-    - interval: The interval between recurrences (e.g., 1 for every week, 2 for every two weeks).
-    - count: The number of times the event should recur.
-    - until: The date the recurrence should end in ISO 8601 format (YYYY-MM-DD).
-    - byday: The days of the week the event should occur on (e.g., "MO,TU,WE,TH,FR").
-    - bymonthday: The days of the month the event should occur on (e.g., "1,15,30").
-    Any event that occurs on multiple days should have a recurrence.  For example, an event that occurs "April 4 - 7" should have a DAILY recurrence with a count of 4.
+  const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it ONLY as a single, raw, valid JSON object string. Do NOT include any explanatory text, markdown formatting (like \`\`\`json), or anything else before or after the JSON object.
 
+  The JSON object must have these keys:
+  - summary: (string) A short title for the event. Be concise.
+  - start: (string) The start date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today.
+  - end: (string) The end date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 10:00 AM. If no date is specified, assume today.
+  - location: (string) The location of the event. If none, use an empty string "".
+  - description: (string) A detailed description. If none, use an empty string "".
+  - recurrence: (object or null) Describes recurrence. If not recurring, set to null.
+    - frequency: (string, e.g., "DAILY", "WEEKLY", "MONTHLY")
+    - interval: (number)
+    - count: (number)
+    - until: (string, YYYY-MM-DD)
+    - byday: (string, e.g., "MO,TU,WE,TH,FR")
+    - bymonthday: (string, e.g., "1,15,30")
 
-  Text: ${text}
-  `;
+  IMPORTANT JSON Formatting Rules:
+  1.  Ensure the entire output is ONLY the JSON object string.
+  2.  All string values within the JSON (summary, start, end, location, description, etc.) MUST be enclosed in double quotes ("").
+  3.  Any literal double quote character (") *inside* a string value MUST be escaped with a backslash (\\"). Example: "Meeting about \\"Project X\\""
+  4.  Any literal backslash character (\\) *inside* a string value MUST be escaped with another backslash (\\\\).
+  5.  Any newline characters within the description or other string fields MUST be escaped as \\n.
+  6.  If an event occurs on multiple days (e.g., "April 4 - 7"), treat it as a DAILY recurrence with the appropriate count (e.g., count: 4).
+
+  Text to parse:
+  ${text}
+
+  JSON Output:`;
+
 
   const requestBody = {
     contents: [{
@@ -216,7 +227,7 @@ async function getEventDetailsFromGemini(text) {
       }]
     }],
     generationConfig: {
-      maxOutputTokens: 200,
+      maxOutputTokens: 1024,
       temperature: 0.4,
       topP: 1
     }
@@ -237,37 +248,43 @@ async function getEventDetailsFromGemini(text) {
     }
 
     const data = await response.json();
-    console.log("Gemini Response:", data);
-    let geminiResponse = data.candidates[0].content.parts[0].text;
+    console.log("Raw Gemini Response Data:", JSON.stringify(data, null, 2)); // Log the full response object
 
-    // Clean up the Gemini response
-    geminiResponse = geminiResponse.replace(/```(json)?/g, '').trim(); // Remove code block markers
-    geminiResponse = geminiResponse.replace(/,(?=\s*?[\}\]])/g, ''); // Remove trailing commas
-    geminiResponse = geminiResponse.replace(/\\"/g, '"'); // Replace escaped quotes with regular quotes
-    geminiResponse = geminiResponse.replace(/\\n/g, '\\\\n'); // Replace escaped newlines with double escaped newlines
-    geminiResponse = geminiResponse.replace(/\\t/g, '\\\\t'); // Replace escaped tabs with double escaped tabs
-    geminiResponse = geminiResponse.replace(/\\r/g, '\\\\r'); // Replace escaped carriage returns with double escaped carriage returns
-    geminiResponse = geminiResponse.replace(/\\f/g, '\\\\f'); // Replace escaped form feeds with double escaped form feeds
-    geminiResponse = geminiResponse.replace(/\\b/g, '\\\\b'); // Replace escaped backspaces with double escaped backspaces
-    geminiResponse = geminiResponse.replace(/\\u/g, '\\\\u'); // Replace escaped unicode with double escaped unicode
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+      console.error("Unexpected Gemini response structure:", data);
+      throw new Error("Unexpected response structure from Gemini API.");
+    }
+
+    let rawGeminiText = data.candidates[0].content.parts[0].text;
+    console.log("Raw Gemini Text Output:", rawGeminiText); // <-- ADD THIS LOG
+
+    let geminiResponse = rawGeminiText;
+
+    // Remove potential markdown code fences and trim whitespace
+    geminiResponse = geminiResponse.replace(/^```(json)?\s*/, '').replace(/\s*```$/, '').trim();
+
+    console.log("Cleaned Gemini Response (Attempting Parse):", geminiResponse); // Log before parsing
 
     // Attempt to parse the cleaned response
     let eventDetails;
     try {
-      eventDetails = JSON.parse(geminiResponse);
+        eventDetails = JSON.parse(geminiResponse);
     } catch (parseError) {
-      console.error("Error parsing Gemini response:", parseError);
-      console.error("Problematic Gemini Response:", geminiResponse);
-      displayError("Error parsing event details. Please try again.");
-      // Return a default object
-      return {
-        summary: "New Event",
-        start: new Date().toISOString(),
-        end: new Date(Date.now() + 3600000).toISOString(),
-        location: "",
-        description: "",
-      };
+        // Log the specific error and the problematic string
+        console.error("Error parsing Gemini response:", parseError.message); // Log specific error message
+        console.error("Problematic Gemini Response String:", geminiResponse); // Log the string that failed
+        displayError(`Error parsing event details: ${parseError.message}. Please check console.`);
+        // Return a default object or re-throw if preferred
+        return {
+            summary: "New Event (Parsing Failed)",
+            start: new Date().toISOString(),
+            end: new Date(Date.now() + 3600000).toISOString(),
+            location: "",
+            description: `Failed to parse details from text:\n${text}`,
+            recurrence: null
+        };
     }
+
 
     // Ensure recurrence is an object or null
     if (eventDetails.recurrence !== null && typeof eventDetails.recurrence !== 'object') {
