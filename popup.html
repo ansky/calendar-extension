@@ -5,16 +5,20 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div id="container">
-    <h1>Calendar Event Creator</h1>
-    <button id="signInButton">Sign in with Google</button>
+  <header class="header">
+    <img src="images/panda_icon_48x48.png" alt="Panda Assistant" class="logo">
+    <h1 class="title">Panda Assistant</h1>
+  </header>
+
+  <main id="container" class="container">
+    <button id="signInButton" class="btn btn-primary">Sign in with Google</button>
     <div id="calendar-select-container" style="display: none;">
       <label for="calendar-select">Select Calendar:</label>
       <select id="calendar-select"></select>
     </div>
     <div id="selectedText"></div>
-    <button id="createEvent">Create Event</button>
-    <div id="error-message" style="display: none;"></div>
+    <button id="createEvent" class="btn btn-secondary">Create Event</button>
+    <div id="error-message" class="error-message" style="display: none;"></div>
     <div id="event-form-container" style="display: none;">
       <h2>Event Details</h2>
       <form id="event-form">
@@ -72,7 +76,7 @@
       <p>Description: <span id="event-description"></span></p>
       <p>Link: <a id="event-link" href="" target="_blank"></a></p>
     </div>
-  </div>
+  </main>
   <script src="popup.js"></script>
 </body>
 </html>

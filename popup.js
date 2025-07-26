@@ -190,35 +190,42 @@ document.getElementById('toggle-recurrence').addEventListener('click', () => {
 });
 
 async function getEventDetailsFromGemini(text) {
-  const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it ONLY as a single, raw, valid JSON object string. Do NOT include any explanatory text, markdown formatting (like \`\`\`json), or anything else before or after the JSON object.
 
-  The JSON object must have these keys:
-  - summary: (string) A short title for the event. Be concise.
-  - start: (string) The start date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today.
-  - end: (string) The end date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 10:00 AM. If no date is specified, assume today.
-  - location: (string) The location of the event. If none, use an empty string "".
-  - description: (string) A detailed description. If none, use an empty string "".
-  - recurrence: (object or null) Describes recurrence. If not recurring, set to null.
-    - frequency: (string, e.g., "DAILY", "WEEKLY", "MONTHLY")
-    - interval: (number)
-    - count: (number)
-    - until: (string, YYYY-MM-DD)
-    - byday: (string, e.g., "MO,TU,WE,TH,FR")
-    - bymonthday: (string, e.g., "1,15,30")
-
-  IMPORTANT JSON Formatting Rules:
-  1.  Ensure the entire output is ONLY the JSON object string.
-  2.  All string values within the JSON (summary, start, end, location, description, etc.) MUST be enclosed in double quotes ("").
-  3.  Any literal double quote character (") *inside* a string value MUST be escaped with a backslash (\\"). Example: "Meeting about \\"Project X\\""
-  4.  Any literal backslash character (\\) *inside* a string value MUST be escaped with another backslash (\\\\).
-  5.  Any newline characters within the description or other string fields MUST be escaped as \\n.
-  6.  If an event occurs on multiple days (e.g., "April 4 - 7"), treat it as a DAILY recurrence with the appropriate count (e.g., count: 4).
-
-  Text to parse:
-  ${text}
-
-  JSON Output:`;
-
+   // Get today's date in YYYY-MM-DD format
+   const today = new Date();
+   const currentYear = today.getFullYear();
+   const currentDateStr = today.toISOString().split('T')[0]; // e.g., "2024-07-27"
+ 
+   const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it ONLY as a single, raw, valid JSON object string. Do NOT include any explanatory text, markdown formatting (like \`\`\`json), or anything else before or after the JSON object.
+ 
+   The current date is ${currentDateStr}. The current year is ${currentYear}.
+ 
+   The JSON object must have these keys:
+   - summary: (string) A short title for the event. Be concise.
+   - start: (string) The start date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today (${currentDateStr}). If no year is specified, assume the current year (${currentYear}) unless the month/day clearly indicates the following year (e.g., if today is Dec and text says "Jan 10 meeting").
+   - end: (string) The end date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 1 hour after the start time. If no date is specified, assume today (${currentDateStr}). If no year is specified, assume the current year (${currentYear}) unless the month/day clearly indicates the following year. Ensure the end date/time is after the start date/time.
+   - location: (string) The location of the event. If none, use an empty string "".
+   - description: (string) A detailed description. Include the original selected text here if relevant. If none, use an empty string "".
+   - recurrence: (object or null) Describes recurrence. If not recurring, set to null.
+     - frequency: (string, e.g., "DAILY", "WEEKLY", "MONTHLY")
+     - interval: (number)
+     - count: (number)
+     - until: (string, YYYY-MM-DD)
+     - byday: (string, e.g., "MO,TU,WE,TH,FR")
+     - bymonthday: (string, e.g., "1,15,30")
+ 
+   IMPORTANT JSON Formatting Rules:
+   1.  Ensure the entire output is ONLY the JSON object string.
+   2.  All string values within the JSON (summary, start, end, location, description, etc.) MUST be enclosed in double quotes ("").
+   3.  Any literal double quote character (") *inside* a string value MUST be escaped with a backslash (\\"). Example: "Meeting about \\"Project X\\""
+   4.  Any literal backslash character (\\) *inside* a string value MUST be escaped with another backslash (\\\\).
+   5.  Any newline characters within the description or other string fields MUST be escaped as \\n.
+   6.  If an event occurs on multiple days (e.g., "April 4 - 7"), treat it as a DAILY recurrence with the appropriate count (e.g., count: 4).
+ 
+   Text to parse:
+   ${text}
+ 
+   JSON Output:`;
 
   const requestBody = {
     contents: [{
