@@ -278,18 +278,7 @@ async function getEventDetailsFromGemini(text) {
         eventDetails = JSON.parse(geminiResponse);
     } catch (parseError) {
         // Log the specific error and the problematic string
-        console.error("Error parsing Gemini response:", parseError.message); // Log specific error message
-        console.error("Problematic Gemini Response String:", geminiResponse); // Log the string that failed
-        displayError(`Error parsing event details: ${parseError.message}. Please check console.`);
-        // Return a default object or re-throw if preferred
-        return {
-            summary: "New Event (Parsing Failed)",
-            start: new Date().toISOString(),
-            end: new Date(Date.now() + 3600000).toISOString(),
-            location: "",
-            description: `Failed to parse details from text:\n${text}`,
-            recurrence: null
-        };
+ 
     }
 
 
