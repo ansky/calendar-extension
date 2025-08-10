@@ -111,6 +111,10 @@ let eventDetailsFromGemini = null; // Store the event details from Gemini
 //Create calendar event
 document.getElementById("createEvent").addEventListener("click", () => {
   if (!selectedText) return;
+
+  const createEventButton = document.getElementById("createEvent");
+  createEventButton.disabled = true;
+
   // Get the current tab's URL
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const currentTab = tabs[0];
@@ -126,6 +130,7 @@ document.getElementById("createEvent").addEventListener("click", () => {
       .catch(error => {
         console.error("Error getting event details from Gemini:", error);
         displayError("Error getting event details. Please try again.");
+        createEventButton.disabled = false; // Re-enable the button on error
       });
   });
 });
