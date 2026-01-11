@@ -150,3 +150,45 @@ textarea {
   border-radius: 4px;
   margin-bottom: 1rem;
 }
+
+/* API Key Config Styles */
+.api-key-config {
+  background-color: #fff;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.api-key-input-group {
+  display: flex;
+  gap: 10px;
+}
+
+#apiKeyInput {
+  flex-grow: 1;
+  margin-bottom: 0;
+}
+
+.btn-sm {
+  width: auto;
+  padding: 0.5rem 1rem;
+  margin-bottom: 0;
+  background-color: #5f6368;
+  color: white;
+}
+
+.btn-sm:hover {
+  background-color: #202124;
+}
+
+.help-text {
+  margin-top: 5px;
+  margin-bottom: 0;
+  color: #5f6368;
+}
+
+.status-message {
+  margin-top: 5px;
+  font-size: 0.9em;
+}

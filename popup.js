@@ -4,7 +4,8 @@ let selectedText = "";
 let accessToken = null;
 let selectedCalendarId = null; // Variable to store the selected calendar ID
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
-const geminiApiKey = 'AIzaSyCKXjau5bxuH89kO0L5SytdWweNU1ZWNlY'; // Replace with your actual Gemini API key
+const defaultGeminiApiKey = 'AIzaSyCKXjau5bxuH89kO0L5SytdWweNU1ZWNlY'; // Fallback key
+let userGeminiApiKey = null;
 
 //Inject content.js
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -106,6 +107,30 @@ document.getElementById("calendar-select").addEventListener("change", (event) =>
   chrome.storage.local.set({ lastSelectedCalendarId: selectedCalendarId });
 });
 
+// Event listener for API Key saving
+document.getElementById('saveApiKeyButton').addEventListener('click', () => {
+  const apiKeyInput = document.getElementById('apiKeyInput');
+  const apiKey = apiKeyInput.value.trim();
+  const statusDiv = document.getElementById('apiKeyStatus');
+
+  if (apiKey) {
+    chrome.storage.local.set({ geminiApiKey: apiKey }, () => {
+      userGeminiApiKey = apiKey;
+      statusDiv.textContent = 'API Key saved!';
+      statusDiv.style.color = 'green';
+      setTimeout(() => { statusDiv.textContent = ''; }, 3000);
+    });
+  } else {
+    // Clear the key if empty
+    chrome.storage.local.remove('geminiApiKey', () => {
+      userGeminiApiKey = null;
+      statusDiv.textContent = 'API Key cleared.';
+      statusDiv.style.color = 'blue';
+      setTimeout(() => { statusDiv.textContent = ''; }, 3000);
+    });
+  }
+});
+
 let eventDetailsFromGemini = null; // Store the event details from Gemini
 
 //Create calendar event
@@ -196,12 +221,12 @@ document.getElementById('toggle-recurrence').addEventListener('click', () => {
 
 async function getEventDetailsFromGemini(text) {
 
-   // Get today's date in YYYY-MM-DD format
-   const today = new Date();
-   const currentYear = today.getFullYear();
-   const currentDateStr = today.toISOString().split('T')[0]; // e.g., "2024-07-27"
- 
-   const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it ONLY as a single, raw, valid JSON object string. Do NOT include any explanatory text, markdown formatting (like \`\`\`json), or anything else before or after the JSON object.
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentDateStr = today.toISOString().split('T')[0]; // e.g., "2024-07-27"
+
+  const prompt = `You are a calendar event creation assistant. Extract the following information from the text provided and return it ONLY as a single, raw, valid JSON object string. Do NOT include any explanatory text, markdown formatting (like \`\`\`json), or anything else before or after the JSON object.
  
    The current date is ${currentDateStr}. The current year is ${currentYear}.
  
@@ -246,7 +271,9 @@ async function getEventDetailsFromGemini(text) {
   };
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
+
+    const keyToUse = userGeminiApiKey || defaultGeminiApiKey;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${keyToUse}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -280,28 +307,28 @@ async function getEventDetailsFromGemini(text) {
     // Attempt to parse the cleaned response
     let eventDetails;
     try {
-        eventDetails = JSON.parse(geminiResponse);
+      eventDetails = JSON.parse(geminiResponse);
     } catch (parseError) {
-        // Log the specific error and the problematic string
-        console.error("Error parsing Gemini response:", parseError.message); // Log specific error message
-        console.error("Problematic Gemini Response String:", geminiResponse); // Log the string that failed
-        displayError(`Error parsing event details: ${parseError.message}. Please check console.`);
-        // Return a default object or re-throw if preferred
-        return {
-            summary: "New Event (Parsing Failed)",
-            start: new Date().toISOString(),
-            end: new Date(Date.now() + 3600000).toISOString(),
-            location: "",
-            description: `Failed to parse details from text:\n${text}`,
-            recurrence: null
-        };
+      // Log the specific error and the problematic string
+      console.error("Error parsing Gemini response:", parseError.message); // Log specific error message
+      console.error("Problematic Gemini Response String:", geminiResponse); // Log the string that failed
+      displayError(`Error parsing event details: ${parseError.message}. Please check console.`);
+      // Return a default object or re-throw if preferred
+      return {
+        summary: "New Event (Parsing Failed)",
+        start: new Date().toISOString(),
+        end: new Date(Date.now() + 3600000).toISOString(),
+        location: "",
+        description: `Failed to parse details from text:\n${text}`,
+        recurrence: null
+      };
     }
 
 
     // Ensure recurrence is an object or null
     if (eventDetails.recurrence !== null && typeof eventDetails.recurrence !== 'object') {
       eventDetails.recurrence = null;
-  }
+    }
 
     return eventDetails;
   } catch (error) {
@@ -379,7 +406,7 @@ function signIn(interactive = true) {
   chrome.identity.getAuthToken({ interactive: interactive, scopes: scopes }, async function (token) {
     if (chrome.runtime.lastError) {
       console.error(chrome.runtime.lastError);
-      if(interactive){
+      if (interactive) {
         displayError("Error signing in. Please try again.");
       }
       return;
@@ -397,6 +424,17 @@ function initialize() {
   updateUI();
   // Attempt silent sign-in
   signIn(false);
+
+  // Load stored API Key
+  chrome.storage.local.get(['geminiApiKey'], (result) => {
+    if (result.geminiApiKey) {
+      userGeminiApiKey = result.geminiApiKey;
+      const apiKeyInput = document.getElementById('apiKeyInput');
+      if (apiKeyInput) {
+        apiKeyInput.value = result.geminiApiKey;
+      }
+    }
+  });
 }
 
 function updateUI() {
@@ -406,7 +444,7 @@ function updateUI() {
 
   if (accessToken) {
     signInButton.style.display = "none";
-    createEventButton.disabled = selectedText? false : true;
+    createEventButton.disabled = selectedText ? false : true;
   } else {
     signInButton.style.display = "block";
     createEventButton.disabled = true;
@@ -424,7 +462,7 @@ document.addEventListener("DOMContentLoaded", () => {
 // Helper functions for UI feedback
 function displayError(message) {
   const errorDiv = document.getElementById('error-message');
-  if(errorDiv){
+  if (errorDiv) {
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
     setTimeout(() => {

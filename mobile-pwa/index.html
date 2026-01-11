@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Panda Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json?v=4">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+    <header class="header">
+        <img src="../images/panda_icon_48x48.png" alt="Panda Assistant" class="logo">
+        <h1 class="title">Panda Assistant</h1>
+    </header>
+
+    <main id="container" class="container">
+        <div id="apiKeyConfig" class="api-key-config">
+            <label for="apiKeyInput">Gemini API Key:</label>
+            <div class="api-key-input-group">
+                <input type="password" id="apiKeyInput" placeholder="Enter your API Key">
+                <button id="saveApiKeyButton" class="btn btn-sm">Save</button>
+            </div>
+            <div id="apiKeyStatus" class="status-message"></div>
+            <p class="help-text"><small>Required for event creation. <a href="https://aistudio.google.com/app/apikey"
+                        target="_blank">Get a key here</a>.</small></p>
+        </div>
+        <hr>
+
+        <!-- Sign In Button (will be handled by Google Identity Services) -->
+        <div id="g_id_onload" data-client_id="YOUR_WEB_CLIENT_ID_HERE" data-callback="handleCredentialResponse"
+            data-auto_select="true">
+        </div>
+        <div id="signInButton" class="g_id_signin" data-type="standard"></div>
+        <button id="signOutButton" class="btn btn-sm"
+            style="display: none; background-color: #d93025; margin-top: 10px;">Sign Out</button>
+
+        <div id="calendar-select-container" style="display: none;">
+            <label for="calendar-select">Select Calendar:</label>
+            <select id="calendar-select"></select>
+        </div>
+
+        <div id="selectedTextContainer">
+            <label for="sharedTextInput">Text to Process:</label>
+            <textarea id="sharedTextInput" placeholder="Paste text here or share from another app..."></textarea>
+        </div>
+
+        <button id="createEvent" class="btn btn-secondary" disabled>Create Event</button>
+        <div id="error-message" class="error-message" style="display: none;"></div>
+
+        <div id="event-form-container" style="display: none;">
+            <h2>Event Details</h2>
+            <form id="event-form">
+                <label for="summary">Summary:</label><br>
+                <input type="text" id="summary" name="summary"><br>
+
+                <label for="start">Start Time:</label><br>
+                <input type="datetime-local" id="start" name="start"><br>
+
+                <label for="end">End Time:</label><br>
+                <input type="datetime-local" id="end" name="end"><br>
+
+                <label for="location">Location:</label><br>
+                <input type="text" id="location" name="location"><br>
+
+                <label for="description">Description:</label><br>
+                <textarea id="description" name="description"></textarea><br>
+
+                <div id="recurrence-fields" style="display: none;">
+                    <h3>Recurrence</h3>
+                    <label for="frequency">Frequency:</label><br>
+                    <select id="frequency" name="frequency">
+                        <option value="">None</option>
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                        <option value="MONTHLY">Monthly</option>
+                        <option value="YEARLY">Yearly</option>
+                    </select><br>
+
+                    <label for="interval">Interval:</label><br>
+                    <input type="number" id="interval" name="interval" min="1" value="1"><br>
+
+                    <label for="count">Count:</label><br>
+                    <input type="number" id="count" name="count" min="1"><br>
+
+                    <label for="until">Until:</label><br>
+                    <input type="date" id="until" name="until"><br>
+
+                    <label for="byday">By Day (e.g., MO,TU,WE):</label><br>
+                    <input type="text" id="byday" name="byday"><br>
+
+                    <label for="bymonthday">By Month Day (e.g., 1,15,30):</label><br>
+                    <input type="text" id="bymonthday" name="bymonthday"><br>
+                </div>
+                <button type="button" id="toggle-recurrence">Add Recurrence</button>
+                <button type="submit" id="confirmEvent">Confirm Event</button>
+            </form>
+        </div>
+
+        <div id="event-details" style="display: none;">
+            <h2>Event Created</h2>
+            <p>Summary: <span id="event-summary"></span></p>
+            <p>Start: <span id="event-start"></span></p>
+            <p>End: <span id="event-end"></span></p>
+            <p>Location: <span id="event-location"></span></p>
+            <p>Description: <span id="event-description"></span></p>
+            <p>Link: <a id="event-link" href="" target="_blank"></a></p>
+        </div>
+    </main>
+
+    <script src="app.js?v=2"></script>
+
+</body>
+
+</html>

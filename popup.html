@@ -11,6 +11,16 @@
   </header>
 
   <main id="container" class="container">
+    <div id="apiKeyConfig" class="api-key-config">
+      <label for="apiKeyInput">Gemini API Key:</label>
+      <div class="api-key-input-group">
+        <input type="password" id="apiKeyInput" placeholder="Enter your API Key">
+        <button id="saveApiKeyButton" class="btn btn-sm">Save</button>
+      </div>
+      <div id="apiKeyStatus" class="status-message"></div>
+      <p class="help-text"><small>Required for event creation. <a href="https://aistudio.google.com/app/apikey" target="_blank">Get a key here</a>.</small></p>
+    </div>
+    <hr>
     <button id="signInButton" class="btn btn-primary">Sign in with Google</button>
     <div id="calendar-select-container" style="display: none;">
       <label for="calendar-select">Select Calendar:</label>
