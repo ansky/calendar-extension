@@ -11,7 +11,7 @@ let gisInited = false;
 // IMPORTANT: Replace with your Web Application Client ID from Google Cloud Console
 // The user (Joel) needs to provide this or update it later.
 const clientId = '833320118734-0vm7j08e678m5opgd9mdrlsb6rcv3nm0.apps.googleusercontent.com';
-const defaultGeminiApiKey = 'AIzaSyCKXjau5bxuH89kO0L5SytdWweNU1ZWNlY'; // Fallback key
+const defaultGeminiApiKey = ''; // No Fallback key
 let userGeminiApiKey = null;
 
 // Initialize Google Identity Services
