@@ -4,7 +4,7 @@ let selectedText = "";
 let accessToken = null;
 let selectedCalendarId = null; // Variable to store the selected calendar ID
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
-const defaultGeminiApiKey = 'AIzaSyCKXjau5bxuH89kO0L5SytdWweNU1ZWNlY'; // Fallback key
+const defaultGeminiApiKey = ''; // No Fallback key
 let userGeminiApiKey = null;
 
 //Inject content.js
