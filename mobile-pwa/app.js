@@ -71,12 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = params.get('url');
 
     if (title || text || url) {
-        const isUrlOnly = url && !text;
+        const urlPattern = /^https?:\/\/\S+$/i;
+        const textIsUrl = text && urlPattern.test(text.trim());
+        const effectiveUrl = url || (textIsUrl ? text.trim() : null);
+        const isUrlOnly = effectiveUrl && (!text || textIsUrl);
+
         if (isUrlOnly) {
-            sharedUrl = url;
-            selectedText = url;
+            sharedUrl = effectiveUrl;
+            selectedText = effectiveUrl;
             const sharedInput = document.getElementById('sharedTextInput');
-            if (sharedInput) sharedInput.value = `Reading page: ${url}`;
+            if (sharedInput) sharedInput.value = `Reading page: ${effectiveUrl}`;
         } else {
             let combinedText = "";
             if (title) combinedText += `Title: ${title}\n`;
