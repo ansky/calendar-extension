@@ -29,6 +29,9 @@ function initTokenClient() {
         callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
                 accessToken = tokenResponse.access_token;
+                const expiresAt = Date.now() + (tokenResponse.expires_in - 60) * 1000;
+                localStorage.setItem('gAccessToken', accessToken);
+                localStorage.setItem('gTokenExpiry', expiresAt.toString());
                 console.log("Access Token received");
                 onSignedIn();
             }
@@ -96,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 google.accounts.oauth2.revoke(token, () => {
                     console.log('Revoked: ' + token);
                     accessToken = null;
+                    localStorage.removeItem('gAccessToken');
+                    localStorage.removeItem('gTokenExpiry');
                     updateUI();
                 });
             }
@@ -146,7 +151,16 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkAuth() {
-    updateUI();
+    const savedToken = localStorage.getItem('gAccessToken');
+    const savedExpiry = localStorage.getItem('gTokenExpiry');
+    if (savedToken && savedExpiry && Date.now() < parseInt(savedExpiry)) {
+        accessToken = savedToken;
+        onSignedIn();
+    } else {
+        localStorage.removeItem('gAccessToken');
+        localStorage.removeItem('gTokenExpiry');
+        updateUI();
+    }
 }
 
 async function onSignedIn() {
@@ -191,8 +205,9 @@ async function fetchCalendars() {
         });
         if (!response.ok) {
             if (response.status === 401) {
-                // Token expired
                 accessToken = null;
+                localStorage.removeItem('gAccessToken');
+                localStorage.removeItem('gTokenExpiry');
                 updateUI();
                 displayError("Session expired. Please sign in again.");
                 return [];
@@ -451,6 +466,8 @@ async function createCalendarEvent(eventDetails) {
             if (response.status === 401) {
                 displayError("Session expired. Please sign in again.");
                 accessToken = null;
+                localStorage.removeItem('gAccessToken');
+                localStorage.removeItem('gTokenExpiry');
                 updateUI();
                 return;
             }
