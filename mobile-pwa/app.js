@@ -1,6 +1,7 @@
 // app.js
 
 let selectedText = "";
+let sharedUrl = null;
 let accessToken = null;
 let selectedCalendarId = null;
 let tokenClient;
@@ -70,15 +71,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const url = params.get('url');
 
     if (title || text || url) {
-        // Combine them intelligently
-        let combinedText = "";
-        if (title) combinedText += `Title: ${title}\n`;
-        if (text) combinedText += `${text}\n`;
-        if (url) combinedText += `URL: ${url}`;
-
-        selectedText = combinedText.trim();
-        const sharedInput = document.getElementById('sharedTextInput');
-        if (sharedInput) sharedInput.value = selectedText;
+        const isUrlOnly = url && !text;
+        if (isUrlOnly) {
+            sharedUrl = url;
+            selectedText = url;
+            const sharedInput = document.getElementById('sharedTextInput');
+            if (sharedInput) sharedInput.value = `Reading page: ${url}`;
+        } else {
+            let combinedText = "";
+            if (title) combinedText += `Title: ${title}\n`;
+            if (text) combinedText += `${text}\n`;
+            if (url) combinedText += `URL: ${url}`;
+            selectedText = combinedText.trim();
+            const sharedInput = document.getElementById('sharedTextInput');
+            if (sharedInput) sharedInput.value = selectedText;
+        }
         const createBtn = document.getElementById('createEvent');
         if (createBtn) createBtn.disabled = false;
     }
@@ -272,7 +279,11 @@ if (createEventBtn) {
         createEventButton.disabled = true;
         createEventButton.textContent = "Processing...";
 
-        getEventDetailsFromGemini(selectedText)
+        const geminiPromise = sharedUrl
+            ? getEventDetailsFromUrl(sharedUrl)
+            : getEventDetailsFromGemini(selectedText);
+
+        geminiPromise
             .then(eventDetails => {
                 populateForm(eventDetails);
                 const formContainer = document.getElementById('event-form-container');
@@ -426,6 +437,82 @@ async function getEventDetailsFromGemini(text) {
         }
     } catch (error) {
         console.error("Error calling Gemini:", error);
+        throw error;
+    }
+}
+
+async function getEventDetailsFromUrl(url) {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentDateStr = today.toISOString().split('T')[0];
+
+    const prompt = `You are a calendar event creation assistant. Read the webpage at this URL and extract any calendar event information from it. Return it ONLY as a single, raw, valid JSON object string. Do NOT include any explanatory text, markdown formatting (like \`\`\`json), or anything else before or after the JSON object.
+
+The current date is ${currentDateStr}. The current year is ${currentYear}.
+
+The JSON object must have these keys:
+- summary: (string) A short title for the event.
+- start: (string) The start date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time is specified, assume 9:00 AM. If no date is specified, assume today (${currentDateStr}).
+- end: (string) The end date and time in ISO 8601 format (YYYY-MM-DDTHH:MM:SS). If no time specified, assume 1 hour after start.
+- location: (string) The location of the event. If none, use "".
+- description: (string) A detailed description. If none, use "".
+- recurrence: (object or null) Describes recurrence. If not recurring, set to null.
+  - frequency: (string, e.g., "DAILY", "WEEKLY", "MONTHLY")
+  - interval: (number)
+  - count: (number)
+  - until: (string, YYYY-MM-DD)
+  - byday: (string, e.g., "MO,TU,WE,TH,FR")
+  - bymonthday: (string, e.g., "1,15,30")
+
+URL: ${url}
+
+JSON Output:`;
+
+    const requestBody = {
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ url_context: {} }],
+        generationConfig: {
+            maxOutputTokens: 1024,
+            temperature: 0.4,
+            topP: 1
+        }
+    };
+
+    try {
+        const keyToUse = userGeminiApiKey || defaultGeminiApiKey;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${keyToUse}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(`Gemini API request failed: ${error.error.message}`);
+        }
+
+        const data = await response.json();
+        let geminiResponse = data.candidates[0].content.parts[0].text;
+        geminiResponse = geminiResponse.replace(/^```(json)?\s*/, '').replace(/\s*```$/, '').trim();
+
+        try {
+            let eventDetails = JSON.parse(geminiResponse);
+            if (eventDetails.recurrence !== null && typeof eventDetails.recurrence !== 'object') {
+                eventDetails.recurrence = null;
+            }
+            return eventDetails;
+        } catch (parseError) {
+            console.error("Error parsing Gemini response:", parseError);
+            return {
+                summary: "New Event (Parsing Failed)",
+                start: new Date().toISOString(),
+                end: new Date(Date.now() + 3600000).toISOString(),
+                description: `Failed to parse event from URL: ${url}`,
+                recurrence: null
+            };
+        }
+    } catch (error) {
+        console.error("Error calling Gemini with URL context:", error);
         throw error;
     }
 }
