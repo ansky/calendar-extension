@@ -43,6 +43,13 @@
             <textarea id="sharedTextInput" placeholder="Paste text here or share from another app..."></textarea>
         </div>
 
+        <div class="image-input-area">
+            <input type="file" id="imageFileInput" accept="image/*">
+            <span class="image-paste-hint">or Ctrl+V to paste</span>
+            <a href="#" id="clearImage" class="clear-image" style="display:none">✕ clear</a>
+        </div>
+        <img id="imagePreview" class="image-preview" alt="Event image preview">
+
         <button id="createEvent" class="btn btn-secondary" disabled>Create Event</button>
         <div id="error-message" class="error-message" style="display: none;"></div>
 

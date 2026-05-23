@@ -7,6 +7,7 @@ let selectedCalendarId = null;
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
+let imageData = null; // { mimeType, base64 } when an image is loaded
 
 // Configuration
 // IMPORTANT: Replace with your Web Application Client ID from Google Cloud Console
@@ -147,7 +148,43 @@ document.addEventListener('DOMContentLoaded', () => {
         sharedInput.addEventListener('input', (e) => {
             selectedText = e.target.value;
             const createBtn = document.getElementById('createEvent');
-            if (createBtn) createBtn.disabled = !selectedText;
+            if (createBtn) createBtn.disabled = !(selectedText || imageData);
+        });
+    }
+
+    // Image file picker
+    const imageFileInput = document.getElementById('imageFileInput');
+    if (imageFileInput) {
+        imageFileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) loadImage(file);
+        });
+    }
+
+    // Image paste (Ctrl+V)
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                loadImage(item.getAsFile());
+                break;
+            }
+        }
+    });
+
+    // Clear image
+    const clearImageBtn = document.getElementById('clearImage');
+    if (clearImageBtn) {
+        clearImageBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            imageData = null;
+            const preview = document.getElementById('imagePreview');
+            preview.src = '';
+            preview.style.display = 'none';
+            clearImageBtn.style.display = 'none';
+            if (imageFileInput) imageFileInput.value = '';
+            updateUI();
         });
     }
 
@@ -191,7 +228,7 @@ function updateUI() {
     if (accessToken) {
         if (signInButton) signInButton.style.display = "none";
         if (signOutButton) signOutButton.style.display = "block";
-        if (createEventButton) createEventButton.disabled = selectedText ? false : true;
+        if (createEventButton) createEventButton.disabled = (selectedText || imageData) ? false : true;
         const calContainer = document.getElementById("calendar-select-container");
         if (calContainer) calContainer.style.display = "block";
     } else {
@@ -277,7 +314,7 @@ if (calendarSelect) {
 const createEventBtn = document.getElementById("createEvent");
 if (createEventBtn) {
     createEventBtn.addEventListener("click", () => {
-        if (!selectedText) return;
+        if (!selectedText && !imageData) return;
 
         const createEventButton = document.getElementById("createEvent");
         createEventButton.disabled = true;
@@ -397,8 +434,14 @@ async function getEventDetailsFromGemini(text) {
  
    JSON Output:`;
 
+    const parts = [];
+    if (imageData) {
+        parts.push({ inline_data: { mime_type: imageData.mimeType, data: imageData.base64 } });
+    }
+    parts.push({ text: prompt });
+
     const requestBody = {
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts }],
         generationConfig: {
             maxOutputTokens: 1024,
             temperature: 0.4,
@@ -522,6 +565,22 @@ async function createCalendarEvent(eventDetails) {
 }
 
 // Helpers
+
+function loadImage(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const [header, base64] = dataUrl.split(',');
+        const mimeType = header.match(/data:([^;]+)/)[1];
+        imageData = { mimeType, base64 };
+        const preview = document.getElementById('imagePreview');
+        preview.src = dataUrl;
+        preview.style.display = 'block';
+        document.getElementById('clearImage').style.display = 'inline';
+        updateUI();
+    };
+    reader.readAsDataURL(file);
+}
 
 function displayError(message) {
     const errorDiv = document.getElementById('error-message');
