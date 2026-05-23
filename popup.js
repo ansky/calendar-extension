@@ -6,6 +6,7 @@ let selectedCalendarId = null; // Variable to store the selected calendar ID
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
 const defaultGeminiApiKey = ''; // No Fallback key
 let userGeminiApiKey = null;
+let imageData = null; // { mimeType, base64 } when an image is loaded
 
 //Inject content.js
 chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -135,7 +136,7 @@ let eventDetailsFromGemini = null; // Store the event details from Gemini
 
 //Create calendar event
 document.getElementById("createEvent").addEventListener("click", () => {
-  if (!selectedText) return;
+  if (!selectedText && !imageData) return;
 
   const createEventButton = document.getElementById("createEvent");
   createEventButton.disabled = true;
@@ -257,12 +258,14 @@ async function getEventDetailsFromGemini(text) {
  
    JSON Output:`;
 
+  const parts = [];
+  if (imageData) {
+    parts.push({ inline_data: { mime_type: imageData.mimeType, data: imageData.base64 } });
+  }
+  parts.push({ text: prompt });
+
   const requestBody = {
-    contents: [{
-      parts: [{
-        text: prompt
-      }]
-    }],
+    contents: [{ parts }],
     generationConfig: {
       maxOutputTokens: 1024,
       temperature: 0.4,
@@ -444,12 +447,55 @@ function updateUI() {
 
   if (accessToken) {
     signInButton.style.display = "none";
-    createEventButton.disabled = selectedText ? false : true;
+    createEventButton.disabled = (selectedText || imageData) ? false : true;
   } else {
     signInButton.style.display = "block";
     createEventButton.disabled = true;
   }
 }
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    const [header, base64] = dataUrl.split(',');
+    const mimeType = header.match(/data:([^;]+)/)[1];
+    imageData = { mimeType, base64 };
+    const preview = document.getElementById('imagePreview');
+    preview.src = dataUrl;
+    preview.style.display = 'block';
+    document.getElementById('clearImage').style.display = 'inline';
+    updateUI();
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('imageFileInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadImage(file);
+});
+
+document.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      loadImage(item.getAsFile());
+      break;
+    }
+  }
+});
+
+document.getElementById('clearImage').addEventListener('click', (e) => {
+  e.preventDefault();
+  imageData = null;
+  const preview = document.getElementById('imagePreview');
+  preview.src = '';
+  preview.style.display = 'none';
+  document.getElementById('clearImage').style.display = 'none';
+  document.getElementById('imageFileInput').value = '';
+  updateUI();
+});
 
 //Set button to disabled by default
 document.addEventListener("DOMContentLoaded", () => {

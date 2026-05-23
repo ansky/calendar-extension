@@ -27,6 +27,12 @@
       <select id="calendar-select"></select>
     </div>
     <div id="selectedText"></div>
+    <div class="image-input-area">
+      <input type="file" id="imageFileInput" accept="image/*">
+      <span class="image-paste-hint">or Ctrl+V to paste</span>
+      <a href="#" id="clearImage" class="clear-image" style="display:none">✕ clear</a>
+    </div>
+    <img id="imagePreview" class="image-preview" alt="Event image preview">
     <button id="createEvent" class="btn btn-secondary">Create Event</button>
     <div id="error-message" class="error-message" style="display: none;"></div>
     <div id="event-form-container" style="display: none;">

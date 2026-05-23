@@ -192,3 +192,37 @@ textarea {
   margin-top: 5px;
   font-size: 0.9em;
 }
+
+/* Image input area */
+.image-input-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.image-paste-hint {
+  color: #5f6368;
+  font-size: 0.85em;
+}
+
+.clear-image {
+  color: #d93025;
+  font-size: 0.85em;
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.clear-image:hover {
+  text-decoration: underline;
+}
+
+.image-preview {
+  display: none;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  margin-bottom: 0.75rem;
+}
