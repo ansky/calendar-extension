@@ -14,7 +14,7 @@ let imageData = null; // { mimeType, base64 } when an image is loaded
 // The user (Joel) needs to provide this or update it later.
 const clientId = '833320118734-0vm7j08e678m5opgd9mdrlsb6rcv3nm0.apps.googleusercontent.com';
 const defaultGeminiApiKey = ''; // No Fallback key
-const geminiModel = 'gemini-2.0-flash-001';
+const geminiModel = 'gemini-2.5-flash-lite';
 let userGeminiApiKey = null;
 
 // Initialize Google Identity Services

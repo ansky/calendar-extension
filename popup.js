@@ -5,7 +5,7 @@ let accessToken = null;
 let selectedCalendarId = null; // Variable to store the selected calendar ID
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
 const defaultGeminiApiKey = ''; // No Fallback key
-const geminiModel = 'gemini-2.0-flash-001';
+const geminiModel = 'gemini-2.5-flash-lite';
 let userGeminiApiKey = null;
 let imageData = null; // { mimeType, base64 } when an image is loaded
 
