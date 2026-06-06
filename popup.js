@@ -5,6 +5,7 @@ let accessToken = null;
 let selectedCalendarId = null; // Variable to store the selected calendar ID
 const clientId = '833320118734-eufl1u5bmtq1v2sj51jk1kuddl7rmujs.apps.googleusercontent.com';
 const defaultGeminiApiKey = ''; // No Fallback key
+const geminiModel = 'gemini-2.0-flash-001';
 let userGeminiApiKey = null;
 let imageData = null; // { mimeType, base64 } when an image is loaded
 
@@ -276,7 +277,7 @@ async function getEventDetailsFromGemini(text) {
   try {
 
     const keyToUse = userGeminiApiKey || defaultGeminiApiKey;
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${keyToUse}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${keyToUse}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
