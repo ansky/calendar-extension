@@ -615,10 +615,13 @@ function buildRRule(recurrence) {
     if (!recurrence) return null;
     let rrule = `RRULE:FREQ=${recurrence.frequency}`;
     if (recurrence.interval) rrule += `;INTERVAL=${recurrence.interval}`;
-    if (recurrence.count) rrule += `;COUNT=${recurrence.count}`;
-    if (recurrence.until) {
+    // RFC 5545 forbids an RRULE from containing both COUNT and UNTIL; prefer COUNT.
+    if (recurrence.count) {
+        rrule += `;COUNT=${recurrence.count}`;
+    } else if (recurrence.until) {
+        // UNTIL must be a full UTC datetime (YYYYMMDDTHHMMSSZ) since event starts have a time component.
         const untilDate = new Date(recurrence.until);
-        const formattedUntil = untilDate.toISOString().slice(0, 10).replace(/-/g, '');
+        const formattedUntil = untilDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
         rrule += `;UNTIL=${formattedUntil}`;
     }
     if (recurrence.byday) rrule += `;BYDAY=${recurrence.byday}`;
